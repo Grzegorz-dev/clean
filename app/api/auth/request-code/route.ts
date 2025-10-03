@@ -3,6 +3,8 @@ import prisma from '@/lib/prisma';
 import { sendVerificationCode } from '@/lib/mailer';
 import { hashPassword } from '@/lib/hash';
 
+export const runtime = 'nodejs';
+
 function generateCode() {
   return (Math.floor(100000 + Math.random() * 900000)).toString(); // 6 cyfr
 }

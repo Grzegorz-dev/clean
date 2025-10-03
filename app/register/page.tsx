@@ -1,7 +1,60 @@
-
 'use client';
 import { useState } from 'react';
 import cls from 'classnames';
+
+const [passwordHash, setPasswordHash] = useState<string | null>(null);
+
+async function verifyCode() {
+  setError(null);
+  setLoading(true);
+  try {
+    const res = await fetch('/api/auth/verify-code', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify({ email, code })
+    });
+    const data = await res.json();
+    if(!res.ok || !data.ok) throw new Error(data.error || 'Nieprawidłowy kod');
+
+    setPasswordHash(data.passwordHash); // zapamiętaj hash
+    setStep(3);
+  } catch (e:any) {
+    setError(e.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+
+async function requestCode() {
+  setError(null);
+  setLoading(true);
+  try {
+    const res = await fetch('/api/auth/request-code', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify({ email, password, role })
+    });
+    const data = await res.json();
+    if(!res.ok || !data.ok) throw new Error(data.error || 'Nie udało się wysłać kodu');
+    setStep(2);
+  } catch (e:any) {
+    setError(e.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+async function uploadToServer(file: File, folder: 'avatar' | 'gallery' | 'uploads' = 'uploads') {
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('folder', folder);
+  const res = await fetch('/api/upload', { method: 'POST', body: fd });
+  const data = await res.json();
+  if (!res.ok || !data.ok) throw new Error(data.error || 'Upload nie powiódł się');
+  return data.url as string; // publiczny URL (lokalnie /uploads/..., prod: Cloudinary https://...)
+}
+
 
 type Role = 'provider' | 'client';
 
@@ -11,6 +64,8 @@ export default function Register(){
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // provider profile fields
   const [profile, setProfile] = useState({
@@ -31,17 +86,65 @@ export default function Register(){
   // client fields
   const [client, setClient] = useState({ firstName:'', city:'', street:'', phone:'', country:'Polska' });
 
-  const next = () => setStep(s => Math.min(s+1, role==='provider'?4:3));
+  const canGoStep1 = email.trim() !== '' && password.trim().length >= 6;
+  const canGoStep2 = /^\d{6}$/.test(code) || code.trim().length > 0; // demo
+  const canFinishProvider = profile.name.trim() !== '' && profile.city.trim() !== '';
+  const canFinishClient = true; // imię/miasto opcjonalne w MVP
+
+  const next = () => {
+    setError(null);
+    setStep(s => Math.min(s+1, role==='provider'?4:3));
+  }
   const prev = () => setStep(s => Math.max(1, s-1));
+
+  async function submitProvider() {
+    setError(null);
+    if (!passwordHash) { setError('Brak weryfikacji e-mail. Wróć do kroku 1.'); return; }
+    if (!canFinishProvider) { setError('Uzupełnij nazwę i miasto.'); return; }
+    setLoading(true);
+    try {
+      const res = await fetch('/api/register/provider', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ email, passwordHash, profile })
+      });
+      const data = await res.json();
+      if(!res.ok || !data.ok) throw new Error(data.error || 'Rejestracja nie powiodła się');
+      window.location.href = '/dashboard';
+    } catch (e:any) {
+      setError(e.message);
+    } finally { setLoading(false); }
+  }
+
+  async function submitClient() {
+    setError(null);
+    if (!passwordHash) { setError('Brak weryfikacji e-mail. Wróć do kroku 1.'); return; }
+    setLoading(true);
+    try {
+      const res = await fetch('/api/register/client', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ email, passwordHash, client })
+      });
+      const data = await res.json();
+      if(!res.ok || !data.ok) throw new Error(data.error || 'Rejestracja nie powiodła się');
+      window.location.href = '/profiles';
+    } catch (e:any) {
+      setError(e.message);
+    } finally { setLoading(false); }
+  }
+
 
   return (
     <main className="paper">
       <h1>Załóż konto</h1>
 
       <div className="tabbar">
-        <button onClick={()=>{setRole('provider'); setStep(1)}} className={cls('tab', {active: role==='provider'})}>Usługodawca</button>
-        <button onClick={()=>{setRole('client'); setStep(1)}} className={cls('tab', {active: role==='client'})}>Klient</button>
+        <button onClick={()=>{setRole('provider'); setStep(1); setError(null)}} className={cls('tab', {active: role==='provider'})}>Usługodawca</button>
+        <button onClick={()=>{setRole('client'); setStep(1); setError(null)}} className={cls('tab', {active: role==='client'})}>Klient</button>
       </div>
+
+      {error && <div className="card" style={{borderColor:'#ff6666', color:'#ffaaaa'}}>{error}</div>}
 
       {step===1 && (
         <section className="card">
@@ -52,22 +155,27 @@ export default function Register(){
               <input className="input" value={email} onChange={e=>setEmail(e.target.value)} placeholder="jan@domena.pl" />
             </div>
             <div>
-              <label>Hasło</label>
+              <label>Hasło (min. 6 znaków)</label>
               <input type="password" className="input" value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••••" />
             </div>
           </div>
-          <button className="button" style={{marginTop:12}} onClick={next}>Dalej</button>
+          <button className="button" style={{marginTop:12}} onClick={requestCode} disabled={!canGoStep1 || loading}>
+            {loading ? 'Wysyłanie...' : 'Wyślij kod i dalej'}
+          </button>
+
         </section>
       )}
 
       {step===2 && (
         <section className="card">
           <h3>Krok 2: Wpisz kod z e-maila</h3>
-          <p className="small">Wersja demo – wpisz dowolny 6-cyfrowy kod.</p>
+          <p className="small">MVP: wpisz dowolny 6-cyfrowy kod (bez wysyłki e-mail).</p>
           <input className="input" value={code} onChange={e=>setCode(e.target.value)} placeholder="123456" />
           <div style={{display:'flex', gap:8, marginTop:12}}>
             <button className="button secondary" onClick={prev}>Wstecz</button>
-            <button className="button" onClick={next}>Zweryfikuj</button>
+            <button className="button" onClick={verifyCode} disabled={!canGoStep2 || loading}>
+              {loading ? 'Sprawdzanie...' : 'Zweryfikuj'}
+            </button>
           </div>
         </section>
       )}
@@ -77,7 +185,7 @@ export default function Register(){
           <h3>Krok 3: Kreator profilu</h3>
           <div className="row">
             <div>
-              <label>Nazwa/Imię</label>
+              <label>Nazwa/Imię *</label>
               <input className="input" value={profile.name} onChange={e=>setProfile({...profile, name:e.target.value})} />
             </div>
             <div>
@@ -87,7 +195,7 @@ export default function Register(){
           </div>
           <div className="row">
             <div>
-              <label>Miasto</label>
+              <label>Miasto *</label>
               <input className="input" value={profile.city} onChange={e=>setProfile({...profile, city:e.target.value})} />
             </div>
             <div>
@@ -107,14 +215,54 @@ export default function Register(){
           </div>
           <div className="row">
             <div>
-              <label>Zdjęcie profilowe (URL)</label>
-              <input className="input" value={profile.avatarUrl} onChange={e=>setProfile({...profile, avatarUrl:e.target.value})} placeholder="https://..." />
+              <label>Zdjęcie profilowe (z komputera)</label>
+              <input className="input" type="file" accept="image/*"
+                onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  if (!f) return;
+                  try {
+                    const url = await uploadToServer(f, 'avatar');
+                    setProfile({ ...profile, avatarUrl: url });
+                  } catch (err:any) {
+                    alert(err.message || 'Błąd uploadu');
+                  }
+                }}
+              />
+              {profile.avatarUrl && (
+                <div style={{marginTop:8}}>
+                  <img src={profile.avatarUrl} alt="podgląd" width={96} height={96} style={{borderRadius:12,objectFit:'cover'}} />
+                </div>
+              )}
             </div>
+
             <div>
-              <label>Galeria (URL-e, rozdzielone przecinkami)</label>
-              <input className="input" onChange={e=>setProfile({...profile, gallery:e.target.value.split(',').map(s=>s.trim()).filter(Boolean)})} placeholder="https://... , https://..." />
+              <label>Galeria (wiele zdjęć)</label>
+              <input className="input" type="file" accept="image/*" multiple
+                onChange={async (e) => {
+                  const files = Array.from(e.target.files || []);
+                  if (!files.length) return;
+                  try {
+                    const urls: string[] = [];
+                    for (const f of files) {
+                      const url = await uploadToServer(f, 'gallery');
+                      urls.push(url);
+                    }
+                    setProfile({ ...profile, gallery: [...profile.gallery, ...urls] });
+                  } catch (err:any) {
+                    alert(err.message || 'Błąd uploadu');
+                  }
+                }}
+              />
+              {!!profile.gallery.length && (
+                <div className="grid" style={{marginTop:8}}>
+                  {profile.gallery.map((u, i) => (
+                    <img key={i} src={u} alt={`g-${i}`} style={{width:'100%',height:120,objectFit:'cover',borderRadius:12}}/>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
+
           <div>
             <label>Opis</label>
             <textarea className="input" rows={4} value={profile.bio} onChange={e=>setProfile({...profile, bio:e.target.value})} />
@@ -138,8 +286,10 @@ export default function Register(){
             <label><input type="checkbox" checked={profile.calcClientRoute} onChange={e=>setProfile({...profile, calcClientRoute:e.target.checked})}/> Obliczaj trasę klienta od jego ulicy (opcjonalnie)</label>
           </div>
           <div style={{display:'flex', gap:8, marginTop:12}}>
-            <button className="button secondary" onClick={prev}>Wstecz</button>
-            <button className="button" onClick={next}>Zakończ</button>
+            <button className="button secondary" onClick={prev} disabled={loading}>Wstecz</button>
+            <button className="button" onClick={submitProvider} disabled={loading || !canFinishProvider}>
+              {loading ? 'Zapisywanie...' : 'Zakończ i utwórz konto'}
+            </button>
           </div>
         </section>
       )}
@@ -174,8 +324,10 @@ export default function Register(){
             </div>
           </div>
           <div style={{display:'flex', gap:8, marginTop:12}}>
-            <button className="button secondary" onClick={prev}>Wstecz</button>
-            <a className="button" href="/profiles">Zakończ i przeglądaj profile</a>
+            <button className="button secondary" onClick={prev} disabled={loading}>Wstecz</button>
+            <button className="button" onClick={submitClient} disabled={loading || !canFinishClient}>
+              {loading ? 'Zapisywanie...' : 'Zakończ i przeglądaj profile'}
+            </button>
           </div>
         </section>
       )}
@@ -183,10 +335,11 @@ export default function Register(){
       {(role==='provider' && step===4) && (
         <section className="card">
           <h3>Gotowe! 🎉</h3>
-          <p>Profil utworzony (demo). Możesz przejść do kokpitu i uzupełnić szczegóły.</p>
+          <p>Profil utworzony. Za chwilę przejdziesz do kokpitu.</p>
           <a className="button" href="/dashboard">Przejdź do kokpitu</a>
         </section>
       )}
     </main>
   );
 }
+

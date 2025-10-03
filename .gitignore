@@ -9,3 +9,4 @@ build
 # env i logi
 .env
 *.log
+/app/generated/prisma

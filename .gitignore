@@ -1,0 +1,11 @@
+# zależności i buildy
+node_modules
+.next
+out
+dist
+build
+.vercel
+
+# env i logi
+.env
+*.log

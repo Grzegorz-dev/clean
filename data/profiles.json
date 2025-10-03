@@ -1,0 +1,137 @@
+[
+  {
+    "id": 1,
+    "name": "Kasia Sprz\u0105taj\u0105ca",
+    "phone": "+48 500 000 001",
+    "city": "Warszawa",
+    "street": "Prosta 1",
+    "country": "Polska",
+    "avatarUrl": "https://images.unsplash.com/photo-1521123845560-14093637aa7d?w=200&q=80",
+    "gallery": [
+      "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=800&q=80",
+      "https://images.unsplash.com/photo-1584624272811-5b1b86c5f1f7?w=800&q=80"
+    ],
+    "bio": "Dok\u0142adne sprz\u0105tanie mieszka\u0144 i dom\u00f3w. Dojazd w granicach miasta.",
+    "travelCost": 10,
+    "calcClientRoute": true,
+    "services": [
+      {
+        "name": "Sprz\u0105tanie",
+        "pricePerHour": 55
+      },
+      {
+        "name": "Pranie/Prasowanie",
+        "pricePerHour": 45
+      },
+      {
+        "name": "Mycie okien",
+        "pricePerHour": 60
+      }
+    ],
+    "availability": {
+      "mon": [
+        "08:00-16:00"
+      ],
+      "tue": [
+        "08:00-16:00"
+      ],
+      "wed": [
+        "08:00-16:00"
+      ],
+      "thu": [
+        "08:00-16:00"
+      ],
+      "fri": [
+        "08:00-16:00"
+      ],
+      "sat": [],
+      "sun": []
+    }
+  },
+  {
+    "id": 2,
+    "name": "Marek \u2013 Z\u0142ota R\u0105czka",
+    "phone": "+48 500 000 002",
+    "city": "Krak\u00f3w",
+    "street": "D\u0142uga 5",
+    "country": "Polska",
+    "avatarUrl": "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=200&q=80",
+    "gallery": [],
+    "bio": "Naprawy drobne, monta\u017c mebli, hydraulika.",
+    "travelCost": 20,
+    "calcClientRoute": false,
+    "services": [
+      {
+        "name": "Monta\u017c mebli",
+        "pricePerHour": 80
+      },
+      {
+        "name": "Hydraulika drobna",
+        "pricePerHour": 90
+      }
+    ],
+    "availability": {
+      "mon": [
+        "10:00-18:00"
+      ],
+      "tue": [
+        "10:00-18:00"
+      ],
+      "wed": [
+        "10:00-18:00"
+      ],
+      "thu": [
+        "10:00-18:00"
+      ],
+      "fri": [
+        "10:00-16:00"
+      ],
+      "sat": [
+        "10:00-14:00"
+      ],
+      "sun": []
+    }
+  },
+  {
+    "id": 3,
+    "name": "Ewa Opiekunka",
+    "phone": "+48 500 000 003",
+    "city": "Gda\u0144sk",
+    "street": "Szeroka 3",
+    "country": "Polska",
+    "avatarUrl": "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=200&q=80",
+    "gallery": [],
+    "bio": "Opieka nad dzie\u0107mi okazjonalnie i na sta\u0142e.",
+    "travelCost": 0,
+    "calcClientRoute": true,
+    "services": [
+      {
+        "name": "Opieka dzienna",
+        "pricePerHour": 35
+      },
+      {
+        "name": "Opieka wieczorna",
+        "pricePerHour": 40
+      }
+    ],
+    "availability": {
+      "mon": [
+        "08:00-16:00"
+      ],
+      "tue": [
+        "08:00-16:00"
+      ],
+      "wed": [
+        "08:00-16:00"
+      ],
+      "thu": [
+        "08:00-16:00"
+      ],
+      "fri": [
+        "08:00-16:00"
+      ],
+      "sat": [],
+      "sun": []
+    }
+  }
+]

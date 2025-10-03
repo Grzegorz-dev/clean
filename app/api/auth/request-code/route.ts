@@ -1,38 +1,48 @@
-import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { sendVerificationCode } from '@/lib/mailer';
-import { hashPassword } from '@/lib/hash';
-
+// app/api/auth/request-code/route.ts
 export const runtime = 'nodejs';
 
-function generateCode() {
-  return (Math.floor(100000 + Math.random() * 900000)).toString(); // 6 cyfr
-}
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { hashPassword } from '@/lib/hash';       // jeśli masz helper
+import { sendVerificationCode } from '@/lib/mailer';
+
+type Role = 'provider' | 'client';
 
 export async function POST(req: Request) {
   try {
-    const { email, password, role } = await req.json() as { email:string; password:string; role:'provider'|'client' };
-    if (!email || !password) return NextResponse.json({ ok:false, error:'Email i hasło są wymagane' }, { status:400 });
+    const { email, password, role } = (await req.json()) as {
+      email?: string;
+      password?: string;
+      role?: Role;
+    };
 
-    // nie pozwól na duplikat użytkownika
-    const exists = await prisma.user.findUnique({ where: { email } });
-    if (exists) return NextResponse.json({ ok:false, error:'Użytkownik już istnieje' }, { status:409 });
+    if (!email || !password || !role) {
+      return NextResponse.json({ ok: false, error: 'Brak danych' }, { status: 400 });
+    }
 
-    const code = generateCode();
+    // hash hasła z kroku 1
     const passwordHash = await hashPassword(password);
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
 
-    // zapisz/aktualizuj rekord
-    await prisma.verificationCode.upsert({
-      where: { email },
-      update: { code, passwordHash, role: role === 'provider' ? 'PROVIDER' : 'CLIENT', expiresAt, consumed:false },
-      create: { email, code, passwordHash, role: role === 'provider' ? 'PROVIDER' : 'CLIENT', expiresAt },
+    // 6-cyfrowy kod i ważność
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    // usuń poprzedni kod dla tego e-maila (bo email jest @unique)
+    await prisma.verificationCode.deleteMany({ where: { email } });
+
+    await prisma.verificationCode.create({
+      data: { email, code, passwordHash, role, expiresAt },
     });
 
+    // wysyłka e-maila
     await sendVerificationCode(email, code);
-    return NextResponse.json({ ok:true });
-  } catch (e:any) {
-    console.error(e);
-    return NextResponse.json({ ok:false, error:'Błąd serwera' }, { status:500 });
+
+    return NextResponse.json({ ok: true });
+  } catch (err: any) {
+    console.error('[request-code]', err);
+    return NextResponse.json(
+      { ok: false, error: 'Błąd serwera' },
+      { status: 500 }
+    );
   }
 }

@@ -255,8 +255,52 @@ export default function Register() {
         </section>
       )}
 
-      {/* --- kolejne kroki (profile providera, klienta) zostają bez zmian z Twojego kodu --- */}
+      {role==='client' && step===3 && (
+        <section className="card">
+          <h3>Krok 3: Dane klienta</h3>
+          <div className="row">
+            <div>
+              <label>Imię</label>
+              <input className="input" value={client.firstName} onChange={e=>setClient({...client, firstName:e.target.value})} />
+            </div>
+            <div>
+              <label>Telefon (opcjonalnie)</label>
+              <input className="input" value={client.phone} onChange={e=>setClient({...client, phone:e.target.value})} />
+            </div>
+          </div>
+          <div className="row">
+            <div>
+              <label>Miasto</label>
+              <input className="input" value={client.city} onChange={e=>setClient({...client, city:e.target.value})} />
+            </div>
+            <div>
+              <label>Ulica</label>
+              <input className="input" value={client.street} onChange={e=>setClient({...client, street:e.target.value})} />
+            </div>
+          </div>
+          <div className="row">
+            <div>
+              <label>Kraj</label>
+              <input className="input" value={client.country} onChange={e=>setClient({...client, country:e.target.value})} />
+            </div>
+          </div>
+          <div style={{display:'flex', gap:8, marginTop:12}}>
+            <button className="button secondary" onClick={prev} disabled={loading}>Wstecz</button>
+            <button className="button" onClick={submitClient} disabled={loading || !canFinishClient}>
+              {loading ? 'Zapisywanie...' : 'Zakończ i przeglądaj profile'}
+            </button>
+          </div>
+        </section>
+      )}
 
+      {(role==='provider' && step===4) && (
+        <section className="card">
+          <h3>Gotowe! 🎉</h3>
+          <p>Profil utworzony. Za chwilę przejdziesz do kokpitu.</p>
+          <a className="button" href="/dashboard">Przejdź do kokpitu</a>
+        </section>
+      )}
     </main>
   );
 }
+
